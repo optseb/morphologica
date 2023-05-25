@@ -425,6 +425,13 @@ int main() {
     std::cout << "After zero, vzero = " << vzero << std::endl;
     if (vzero.sum() != 0.0f) { --rtn; }
 
+    // Test sum on a vvec containing NaNs. Currently, vvec will include NaN in the sum and the sum is nan.
+    vvec<float> vwnan = { 1.0f, 2.0f, std::numeric_limits<float>::quiet_NaN(), 3.0f };
+    std::cout << "sum including nans: " << vwnan.sum() << std::endl;
+    // Ideally:
+    if (vwnan.sum() != 6.0f) { --rtn; }
+    //if (vwnan.prune_nan().sum() != 6.0f) { --rtn; }
+
     // What about a vvec of vecs?
     vvec<morph::vec<int, 2>> vvvec = { {1,2}, {3,4} };
     std::cout << "Before zero: " << vvvec << " with sum " << vvvec.sum().sum() << std::endl;

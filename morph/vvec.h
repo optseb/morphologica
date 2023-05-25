@@ -434,6 +434,9 @@ namespace morph {
              */
             static constexpr S unitThresh = 0.001;
 
+            // If any element is NaN then return false. If any element is inf, then return false, too
+            if (this->has_nan_or_inf() == true) { return false; }
+
             auto subtract_squared = [](S a, S b) { return a - b * b; };
             const S metric = std::accumulate (this->begin(), this->end(), S{1}, subtract_squared);
             if (std::abs(metric) > unitThresh) {
@@ -449,9 +452,15 @@ namespace morph {
          */
         S length() const
         {
-            auto add_squared = [](S a, S b) { return a + b * b; };
-            const S len = std::sqrt (std::accumulate (this->begin(), this->end(), S{0}, add_squared));
-            return len;
+            if constexpr (std::is_floating_point<std::decay_t<S>>::value == true) {
+                auto add_squared = [](S a, S b) { return std::isnan(b) ? a : a + b * b; };
+                const S len = std::sqrt (std::accumulate (this->begin(), this->end(), S{0}, add_squared));
+                return len;
+            } else {
+                auto add_squared = [](S a, S b) { return a + b * b; };
+                const S len = std::sqrt (std::accumulate (this->begin(), this->end(), S{0}, add_squared));
+                return len;
+            }
         }
 
         /*!
@@ -497,9 +506,15 @@ namespace morph {
          */
         S length_sq() const
         {
-            auto add_squared = [](S a, S b) { return a + b * b; };
-            const S len_sq = std::accumulate (this->begin(), this->end(), S{0}, add_squared);
-            return len_sq;
+            if constexpr (std::is_floating_point<std::decay_t<S>>::value == true) {
+                auto add_squared = [](S a, S b) { return std::isnan(b) ? a : a + b * b; };
+                const S len_sq = std::accumulate (this->begin(), this->end(), S{0}, add_squared);
+                return len_sq;
+            } else {
+                auto add_squared = [](S a, S b) { return a + b * b; };
+                const S len_sq = std::accumulate (this->begin(), this->end(), S{0}, add_squared);
+                return len_sq;
+            }
         }
 
         /*!
@@ -746,11 +761,7 @@ namespace morph {
         }
 
         //! Return the arithmetic mean of the elements
-        S mean() const
-        {
-            const S sum = std::accumulate (this->begin(), this->end(), S{0});
-            return sum / this->size();
-        }
+        S mean() const { return this->sum() / this->size(); }
 
         //! Return the variance of the elements
         S variance() const
@@ -759,7 +770,7 @@ namespace morph {
             S _mean = this->mean();
             S sos_deviations = S{0};
             for (S val : *this) {
-                sos_deviations += ((val-_mean)*(val-_mean));
+                sos_deviations += std::isnan(val) ? 0 : ((val-_mean)*(val-_mean));
             }
             S variance = sos_deviations / (this->size()-1);
             return variance;
@@ -772,17 +783,27 @@ namespace morph {
             return std::sqrt (this->variance());
         }
 
-        //! Return the sum of the elements
+        //! Return the sum of the elements, ignoring NaN elements
         S sum() const
         {
-            return std::accumulate (this->begin(), this->end(), S{0});
+            if constexpr (std::is_floating_point<std::decay_t<S>>::value == true) {
+                auto add_ignoring_nan = [](S a, S b) { return std::isnan(b) ? a : a+b; };
+                return std::accumulate (this->begin(), this->end(), S{0}, add_ignoring_nan);
+            } else {
+                return std::accumulate (this->begin(), this->end(), S{0});
+            }
         }
 
         //! Return the product of the elements
         S product() const
         {
-            auto _product = [](S a, S b) mutable { return a ? a * b : b; };
-            return std::accumulate (this->begin(), this->end(), S{0}, _product);
+            if constexpr (std::is_floating_point<std::decay_t<S>>::value == true) {
+                auto _product = [](S a, S b) mutable { return std::isnan(b) ? a : a ? a * b : b; };
+                return std::accumulate (this->begin(), this->end(), S{0}, _product);
+            } else {
+                auto _product = [](S a, S b) mutable { return a ? a * b : b; };
+                return std::accumulate (this->begin(), this->end(), S{0}, _product);
+            }
         }
 
         /*!
